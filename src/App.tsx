@@ -5,6 +5,7 @@ import ItemList from "./components/ItemList";
 import ItemForm from "./components/ItemForm";
 import SetupGuide from "./components/SetupGuide";
 import LogsView from "./components/LogsView";
+import Logo from "./components/Logo";
 import { 
   Database, 
   Layers, 
@@ -647,32 +648,24 @@ export default function App() {
           <div className="flex justify-between items-center h-16">
             
             {/* Title / Brand logo */}
-            <div className="flex items-center gap-3">
-              <div className="bg-emerald-50 text-emerald-600 p-2 rounded-xl border border-emerald-100 flex items-center justify-center">
-                <FileSpreadsheet className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-base font-bold text-gray-900 tracking-tight leading-none">
-                    Spreadsheet Inventory
-                  </h1>
-                  
-                  {isSyncing ? (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-indigo-50 text-indigo-700 animate-pulse border border-indigo-100">
-                      <svg className="animate-spin h-2 w-2 text-indigo-600" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Syncing
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                      <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
-                      Synced
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-gray-400 font-medium">Free Google Sheets Backend Database</span>
+            <div className="flex items-center gap-4">
+              <Logo className="w-10 h-10" showText={true} />
+              
+              <div className="flex flex-col justify-center border-l border-gray-100 pl-4 h-8">
+                {isSyncing ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-indigo-50 text-indigo-700 animate-pulse border border-indigo-100">
+                    <svg className="animate-spin h-2 w-2 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Syncing
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                    <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
+                    Synced
+                  </span>
+                )}
               </div>
             </div>
 
@@ -820,9 +813,17 @@ export default function App() {
       </main>
 
       {/* Footer Branding */}
-      <footer className="bg-white border-t border-gray-100 py-4 text-center text-xs text-gray-400 shrink-0" id="app-footer">
-        <p>100% Free & Open-Source Cloud-Synced Inventory Management App.</p>
-        <p className="mt-1">Backed securely by Google Sheets & Apps Script. No credit cards or registration required.</p>
+      <footer className="bg-white border-t border-gray-100 py-6 text-center text-xs text-gray-400 shrink-0" id="app-footer">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Logo className="w-5 h-5" />
+            <span className="font-semibold text-gray-600">Swot<span className="text-[#1BC2A4]">.works</span> Inventory</span>
+          </div>
+          <div className="text-gray-400 text-right sm:text-left">
+            <p>100% Secure & Cloud-Synced Spreadsheet Operations Portal.</p>
+            <p className="mt-0.5">Backed by Google Sheets & Apps Script. No registration required.</p>
+          </div>
+        </div>
       </footer>
 
       {/* Item Form Modal */}

@@ -24,3 +24,125 @@
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Print-friendly Stylesheet */
+@media print {
+  /* Hide standard web layouts & non-report areas completely */
+  #app-header,
+  #tabs-navigation,
+  #global-error-banner,
+  #controls-panel,
+  #app-footer,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset layout structure to plain white background for paper and high text contrast */
+  html, body, #root, #main-app-shell, #main-content-stage, #tab-stage-view, #item-list-container {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  /* Expand table container fully and disable horizontal scrolling */
+  #inventory-table-card {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  /* Style table with standard report look and feel */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important; /* Ensure headers repeat on multi-page print */
+  }
+
+  tr {
+    border-bottom: 1px solid #e5e7eb !important;
+  }
+
+  th, td {
+    padding: 6px 8px !important;
+    font-size: 8pt !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Add light-grey backgrounds for header cells */
+  th {
+    background-color: #f9fafb !important;
+    color: #374151 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    border-bottom: 2px solid #d1d5db !important;
+    text-align: left !important;
+  }
+
+  th.text-right {
+    text-align: right !important;
+  }
+
+  /* Subtly highlight row striping and out-of-stock colors for printing readability */
+  tr.bg-rose-50\/30 {
+    background-color: #fff5f5 !important;
+  }
+  
+  tr.bg-amber-50\/15 {
+    background-color: #fffbeb !important;
+  }
+
+  /* Customize table cell borders to look neat and defined */
+  td {
+    border-bottom: 1px solid #f3f4f6 !important;
+  }
+
+  /* Category indicator pills on print */
+  .rounded-full {
+    border: 1px solid #e0e7ff !important;
+    background-color: #f5f7ff !important;
+    color: #4338ca !important;
+    padding: 1px 6px !important;
+    font-size: 7.5pt !important;
+    border-radius: 9999px !important;
+  }
+
+  /* Ensure long text wraps elegantly to fit the column size and prevent horizontal clipping */
+  .whitespace-nowrap {
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  /* Page Break & Page Configuration */
+  @page {
+    size: A4 landscape; /* Landscape fits 11 columns beautifully */
+    margin: 1.2cm 1cm 1.2cm 1cm;
+  }
+}
+

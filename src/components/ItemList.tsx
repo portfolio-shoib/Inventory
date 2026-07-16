@@ -12,7 +12,8 @@ import {
   ArrowUpDown,
   ChevronDown,
   ShoppingBag,
-  ExternalLink
+  ExternalLink,
+  Printer
 } from "lucide-react";
 
 interface ItemListProps {
@@ -47,6 +48,7 @@ export default function ItemList({
 }: ItemListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlyLowStock, setShowOnlyLowStock] = useState(false);
+  const isIframe = typeof window !== "undefined" && window.self !== window.top;
   const [sortField, setSortField] = useState<SortField>("Item Name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
@@ -111,6 +113,40 @@ export default function ItemList({
 
   return (
     <div className="space-y-4" id="item-list-container">
+      {/* Print-Only Professional Header */}
+      <div className="hidden print:block border-b-2 border-gray-800 pb-4 mb-6" id="print-report-header">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight uppercase">Inventory Stock Report</h1>
+            <p className="text-xs text-gray-500 mt-1">Spreadsheet Inventory Management System</p>
+          </div>
+          <div className="text-right text-xs text-gray-600 space-y-1">
+            <div><strong>Date Generated:</strong> {new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+            <div><strong>Database Mode:</strong> {connectionMode === "live" ? "Google Sheets Live" : "Local Demo Storage"}</div>
+            <div><strong>Filtered By:</strong> {categoryFilter || "All Categories"}{showOnlyLowStock ? " (Low Stock Only)" : ""}</div>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-gray-100">
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Total SKUs Listed</span>
+            <span className="text-base font-bold text-gray-900 font-sans mt-0.5 block">{filteredItems.length} items</span>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Total Stock Units</span>
+            <span className="text-base font-bold text-gray-900 font-sans mt-0.5 block">
+              {filteredItems.reduce((sum, item) => sum + (Number(item.Quantity) || 0), 0).toLocaleString()} pcs
+            </span>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60 font-semibold">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Total Valuation</span>
+            <span className="text-base font-bold text-indigo-900 font-sans mt-0.5 block">
+              Rs. {totalFilteredValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Top Filter & Operations Controls Panel */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-4" id="controls-panel">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
@@ -161,7 +197,21 @@ export default function ItemList({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 self-end md:self-auto">
+        <div className="flex items-center gap-2 self-end md:self-auto print:hidden">
+          {/* Print Report Button */}
+          <button
+            onClick={() => {
+              window.focus();
+              window.print();
+            }}
+            title="Print inventory list view"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer"
+            id="btn-print-report"
+          >
+            <Printer className="w-4 h-4 text-gray-500" />
+            <span className="hidden sm:inline">Print Report</span>
+          </button>
+
           {/* Refresh/Sync button */}
           <button
             onClick={onRefresh}
@@ -185,8 +235,21 @@ export default function ItemList({
         </div>
       </div>
 
+      {/* Iframe print warning hint */}
+      {isIframe && (
+        <div className="bg-amber-50/50 border border-amber-200/40 rounded-xl p-3 text-xs text-amber-800 flex items-start gap-2.5 print:hidden" id="iframe-print-tip">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-bold text-amber-900">Printing Hint</p>
+            <p className="text-amber-700/95 leading-relaxed">
+              Because this application is running inside a secure preview pane, some browsers block printing tasks. If nothing happens when you click "Print Report", click the <strong className="text-amber-900 font-semibold">"Open in New Tab"</strong> button in the top-right corner, then print flawlessly!
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Connection Info Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-xs text-gray-500">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-xs text-gray-500 print:hidden">
         <div>
           Showing <span className="font-semibold text-gray-800">{filteredItems.length}</span> of <span className="font-semibold text-gray-800">{items.length}</span> items
           {categoryFilter && <span> in <span className="font-semibold text-gray-800">{categoryFilter}</span></span>}
@@ -231,7 +294,7 @@ export default function ItemList({
                 >
                   <div className="flex items-center gap-1.5">
                     Item Name
-                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors print:hidden" />
                   </div>
                 </th>
 
@@ -241,7 +304,7 @@ export default function ItemList({
                 >
                   <div className="flex items-center gap-1.5">
                     Description
-                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors print:hidden" />
                   </div>
                 </th>
 
@@ -251,7 +314,7 @@ export default function ItemList({
                 >
                   <div className="flex items-center gap-1.5">
                     Category
-                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors print:hidden" />
                   </div>
                 </th>
 
@@ -261,7 +324,7 @@ export default function ItemList({
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     Quantity
-                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors print:hidden" />
                   </div>
                 </th>
 
@@ -271,7 +334,7 @@ export default function ItemList({
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     Unit Price
-                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors print:hidden" />
                   </div>
                 </th>
 
@@ -281,7 +344,7 @@ export default function ItemList({
                 >
                   <div className="flex items-center gap-1.5">
                     Weight
-                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors print:hidden" />
                   </div>
                 </th>
 
@@ -291,7 +354,7 @@ export default function ItemList({
                 >
                   <div className="flex items-center gap-1.5">
                     Vendor Name
-                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors print:hidden" />
                   </div>
                 </th>
 
@@ -301,7 +364,7 @@ export default function ItemList({
                 >
                   <div className="flex items-center gap-1.5">
                     Vendor Contact
-                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors print:hidden" />
                   </div>
                 </th>
 
@@ -311,7 +374,7 @@ export default function ItemList({
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     Total Value
-                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors print:hidden" />
                   </div>
                 </th>
 
@@ -321,11 +384,11 @@ export default function ItemList({
                 >
                   <div className="flex items-center gap-1.5">
                     Last Updated
-                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors print:hidden" />
                   </div>
                 </th>
 
-                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right print:hidden">Actions</th>
               </tr>
             </thead>
             
@@ -387,7 +450,7 @@ export default function ItemList({
                           <button
                             onClick={() => onAdjustQuantity(item, -1)}
                             disabled={qty <= 0}
-                            className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30 disabled:hover:bg-transparent rounded-md transition-colors cursor-pointer"
+                            className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30 disabled:hover:bg-transparent rounded-md transition-colors cursor-pointer print:hidden"
                             title="Quick Decrement (-1)"
                             id={`btn-qty-dec-${item.ID}`}
                           >
@@ -403,12 +466,12 @@ export default function ItemList({
                             </div>
                             
                             {isOutOfStock && (
-                              <span className="inline-block text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.2 rounded uppercase leading-none mt-0.5 whitespace-nowrap">
+                              <span className="inline-block text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.2 rounded uppercase leading-none mt-0.5 whitespace-nowrap print:border print:border-rose-400">
                                 Out of Stock
                               </span>
                             )}
                             {isLowStock && (
-                              <span className="inline-block text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded uppercase leading-none mt-0.5 whitespace-nowrap">
+                              <span className="inline-block text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded uppercase leading-none mt-0.5 whitespace-nowrap print:border print:border-amber-400">
                                 Low Stock
                               </span>
                             )}
@@ -417,7 +480,7 @@ export default function ItemList({
                           {/* Quick Increment Button */}
                           <button
                             onClick={() => onAdjustQuantity(item, 1)}
-                            className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
+                            className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer print:hidden"
                             title="Quick Increment (+1)"
                             id={`btn-qty-inc-${item.ID}`}
                           >
@@ -464,7 +527,7 @@ export default function ItemList({
                       </td>
 
                       {/* Actions */}
-                      <td className="p-4 text-right whitespace-nowrap">
+                      <td className="p-4 text-right whitespace-nowrap print:hidden">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => onEdit(item)}
@@ -502,7 +565,7 @@ export default function ItemList({
                     Rs. {totalFilteredValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   <td></td>
-                  <td></td>
+                  <td className="print:hidden"></td>
                 </tr>
               </tfoot>
             )}
