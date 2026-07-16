@@ -28,16 +28,16 @@ export default function ItemForm({ item, onClose, onSave }: ItemFormProps) {
   // Populate form if we are in Edit Mode
   useEffect(() => {
     if (item) {
-      setItemName(item["Item Name"] || "");
+      setItemName(item["Item Name"] !== undefined && item["Item Name"] !== null ? String(item["Item Name"]) : "");
       setCategory(item.Category || CATEGORIES[0]);
       setQuantity(Number(item.Quantity) || 0);
       setUnitPrice(Number(item["Unit Price"]) || 0);
-      setDescription(item.Description || "");
+      setDescription(item.Description !== undefined && item.Description !== null ? String(item.Description) : "");
       setUnit(item.Unit || "pcs");
       setWeightValue(item["Weight Value"] !== undefined && item["Weight Value"] !== 0 ? Number(item["Weight Value"]) : "");
       setWeightUnit(item["Weight Unit"] || "g");
-      setVendorName(item["Vendor Name"] || "");
-      setVendorContact(item["Vendor Contact"] || "");
+      setVendorName(item["Vendor Name"] !== undefined && item["Vendor Name"] !== null ? String(item["Vendor Name"]) : "");
+      setVendorContact(item["Vendor Contact"] !== undefined && item["Vendor Contact"] !== null ? String(item["Vendor Contact"]) : "");
       
       // Auto-detect pricing calculation
       if (item["Weight Value"] && Number(item["Weight Value"]) > 0) {
@@ -79,8 +79,13 @@ export default function ItemForm({ item, onClose, onSave }: ItemFormProps) {
     e.preventDefault();
     setValidationError("");
 
+    const nameStr = String(itemName).trim();
+    const descStr = String(description).trim();
+    const vendorNameStr = String(vendorName).trim();
+    const vendorContactStr = String(vendorContact).trim();
+
     // Simple validations
-    if (!itemName.trim()) {
+    if (!nameStr) {
       setValidationError("Item Name is required.");
       return;
     }
@@ -98,18 +103,18 @@ export default function ItemForm({ item, onClose, onSave }: ItemFormProps) {
     setIsSubmitting(true);
     try {
       const itemData: Partial<InventoryItem> = {
-        "Item Name": itemName.trim(),
+        "Item Name": nameStr,
         SKU: "",
         Category: category,
         Quantity: Number(quantity),
         "Unit Price": Number(unitPrice),
         "Total Value": Number(calculatedTotalValue.toFixed(2)),
-        Description: description.trim(),
+        Description: descStr,
         Unit: unit,
         "Weight Value": weightValue !== "" ? Number(weightValue) : 0,
         "Weight Unit": weightUnit,
-        "Vendor Name": vendorName.trim(),
-        "Vendor Contact": vendorContact.trim(),
+        "Vendor Name": vendorNameStr,
+        "Vendor Contact": vendorContactStr,
       };
 
       await onSave(itemData);
@@ -167,7 +172,7 @@ export default function ItemForm({ item, onClose, onSave }: ItemFormProps) {
               type="text"
               id="item-name"
               required
-              placeholder="e.g. Dell UltraSharp 27"
+              placeholder="e.g. Fresh Tomatoes or Chicken Breast"
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
               className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-hidden"
@@ -331,7 +336,7 @@ export default function ItemForm({ item, onClose, onSave }: ItemFormProps) {
             <textarea
               id="item-description"
               rows={2}
-              placeholder="e.g. High quality cotton fabric, store on top shelf, handle with care..."
+              placeholder="e.g. Keep refrigerated below 4°C, use within 3 days, handle with care..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-hidden resize-none"
@@ -353,7 +358,7 @@ export default function ItemForm({ item, onClose, onSave }: ItemFormProps) {
                 <input
                   type="text"
                   id="vendor-name"
-                  placeholder="e.g. Al-Makkah Traders"
+                  placeholder="e.g. Metro Cash & Carry, Local Farm Produce"
                   value={vendorName}
                   onChange={(e) => setVendorName(e.target.value)}
                   className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-hidden"

@@ -1,6 +1,6 @@
 {
   "name": "Google Sheets Inventory Manager",
-  "description": "A lightweight, beautiful, and completely free inventory management system backed by any Google Sheet via Google Apps Script.",
+  "description": "A lightweight, beautiful inventory management system tailored for restaurants and food businesses, backed by any Google Sheet via Google Apps Script.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

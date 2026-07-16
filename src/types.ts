@@ -34,13 +34,14 @@ export interface ConnectionConfig {
 }
 
 export const CATEGORIES = [
-  "Electronics",
-  "Apparel",
-  "Home & Kitchen",
-  "Office Supplies",
-  "Books & Stationery",
-  "Sports & Outdoors",
-  "Automotive",
-  "Toys & Games",
+  "Fresh Produce",
+  "Meat, Poultry & Seafood",
+  "Dairy & Eggs",
+  "Grains, Flour & Dry Goods",
+  "Spices, Condiments & Oils",
+  "Beverages",
+  "Bakery & Desserts",
+  "Packaging & Disposables",
+  "Kitchen Chemicals & Cleaners",
   "Other"
 ];
