@@ -108,7 +108,7 @@ export default function Logo({ className = "w-8 h-8", showText = false, withBg =
           <span className="text-base font-extrabold text-gray-900 tracking-tight leading-none flex items-center gap-0.5">
             Swot<span className="text-[#1BC2A4] font-semibold">.works</span>
           </span>
-          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Inventory Portal</span>
+          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5 sm:block hidden">Inventory Portal</span>
         </div>
       </div>
     );

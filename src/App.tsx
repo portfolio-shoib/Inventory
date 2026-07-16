@@ -651,18 +651,21 @@ export default function App() {
             <div className="flex items-center gap-4">
               <Logo className="w-10 h-10" showText={true} />
               
-              <div className="flex flex-col justify-center border-l border-gray-100 pl-4 h-8">
+              <div className="flex flex-col justify-center border-l border-gray-100 pl-3 h-8 sm:pl-4">
                 {isSyncing ? (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-indigo-50 text-indigo-700 animate-pulse border border-indigo-100">
-                    <svg className="animate-spin h-2 w-2 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 animate-pulse border border-indigo-100 shadow-3xs">
+                    <svg className="animate-spin h-2.5 w-2.5 text-indigo-600" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     Syncing
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                    <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-3xs">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                    </span>
                     Synced
                   </span>
                 )}
@@ -813,16 +816,12 @@ export default function App() {
       </main>
 
       {/* Footer Branding */}
-      <footer className="bg-white border-t border-gray-100 py-6 pb-24 md:pb-6 text-center text-xs text-gray-400 shrink-0" id="app-footer">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Logo className="w-5 h-5" />
-            <span className="font-semibold text-gray-600">Swot<span className="text-[#1BC2A4]">.works</span> Inventory</span>
-          </div>
-          <div className="text-gray-400 text-right sm:text-left">
-            <p>100% Secure & Cloud-Synced Spreadsheet Operations Portal.</p>
-            <p className="mt-0.5">Backed by Google Sheets & Apps Script. No registration required.</p>
-          </div>
+      <footer className="bg-white border-t border-gray-100 py-4 pb-24 md:pb-4 text-center text-xs text-gray-400 shrink-0" id="app-footer">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-center gap-2 flex-wrap text-[11px] sm:text-xs">
+          <Logo className="w-4 h-4" />
+          <span className="font-semibold text-gray-600">Swot<span className="text-[#1BC2A4]">.works</span> Inventory</span>
+          <span className="text-gray-300">|</span>
+          <span>Secure Cloud-Synced Operations Portal</span>
         </div>
       </footer>
 
