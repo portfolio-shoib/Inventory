@@ -135,6 +135,16 @@
     background: #ffffff !important;
   }
 
+  /* Force desktop grid table and hide mobile card listing in prints */
+  #desktop-inventory-table-container {
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  #inventory-mobile-list {
+    display: none !important;
+  }
+
   .overflow-x-auto {
     overflow: visible !important;
   }

@@ -280,7 +280,7 @@ export default function ItemList({
       {/* Main Table Card */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden" id="inventory-table-card">
         {/* Desktop View Table */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto" id="desktop-inventory-table-container">
           <table className="w-full text-left border-collapse" id="inventory-table">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
