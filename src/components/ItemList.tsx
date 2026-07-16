@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { InventoryItem, CATEGORIES } from "../types";
 import Logo from "./Logo";
+import { toPng } from "html-to-image";
 import { 
   Search, 
   Filter, 
@@ -14,7 +15,8 @@ import {
   ChevronDown,
   ShoppingBag,
   ExternalLink,
-  Printer
+  Printer,
+  Download
 } from "lucide-react";
 
 interface ItemListProps {
@@ -53,6 +55,36 @@ export default function ItemList({
   const [sortField, setSortField] = useState<SortField>("Item Name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // High-Resolution PNG Report Downloader
+  const handleDownloadPng = async () => {
+    const el = document.getElementById("report-png-capture-root");
+    if (!el) return;
+    setIsDownloading(true);
+    try {
+      // Small delay to ensure the DOM is synchronized
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const dataUrl = await toPng(el, {
+        backgroundColor: "#ffffff",
+        cacheBust: true,
+        pixelRatio: 2, // Retains crispy high-res look
+        style: {
+          transform: "scale(1)",
+          transformOrigin: "top left",
+        },
+      });
+      const link = document.createElement("a");
+      const timestamp = new Date().toISOString().slice(0, 10);
+      link.download = `SwotWorks_Inventory_${timestamp}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Failed to generate PNG report", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   // Sorting Handler
   const handleSort = (field: SortField) => {
@@ -207,18 +239,28 @@ export default function ItemList({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 self-end md:self-auto print:hidden">
-          {/* Print Report Button */}
+          {/* Download PNG Report Button */}
           <button
-            onClick={() => {
-              window.focus();
-              window.print();
-            }}
-            title="Print inventory list view"
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer"
-            id="btn-print-report"
+            onClick={handleDownloadPng}
+            disabled={isDownloading}
+            title="Download clean high-resolution PNG image of your inventory"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            id="btn-download-png-report"
           >
-            <Printer className="w-4 h-4 text-gray-500" />
-            <span className="hidden sm:inline">Print Report</span>
+            {isDownloading ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 text-indigo-600" />
+                <span className="hidden sm:inline">Download PNG</span>
+              </>
+            )}
           </button>
 
           {/* Refresh/Sync button */}
@@ -766,6 +808,114 @@ export default function ItemList({
           </div>
         </div>
       )}
+
+      {/* Hidden PNG Report Container (Strictly for High-Res Capture) */}
+      <div 
+        key="png-capture-element"
+        id="report-png-capture-root" 
+        className="absolute top-[-9999px] left-[-9999px] bg-white p-8 space-y-6 text-gray-900 border border-gray-100"
+        style={{ width: "1200px", fontFamily: "Inter, system-ui, sans-serif" }}
+      >
+        <div className="flex justify-between items-center border-b border-teal-600/30 pb-5">
+          <div className="flex items-center gap-3">
+            <Logo className="w-12 h-12" />
+            <div>
+              <h1 className="text-xl font-black text-gray-950 tracking-tight leading-none">
+                Swot<span className="text-[#1BC2A4]">.works</span>
+              </h1>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700/80 mt-1">Inventory Management Portal</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <h2 className="text-lg font-extrabold text-gray-900 tracking-tight uppercase">Inventory Stock Report</h2>
+            <div className="text-[10px] text-gray-500 font-medium mt-1.5 space-y-0.5">
+              <div>Date Generated: <span className="font-semibold text-gray-800">{new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+              <div>Database Connection: <span className="font-semibold text-gray-800">{connectionMode === "live" ? "Google Sheets Live" : "Local Demo Storage"}</span></div>
+              <div>Filtered Category: <span className="font-semibold text-gray-800">{categoryFilter || "All Categories"}{showOnlyLowStock ? " (Low Stock Only)" : ""}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-teal-50/40 p-3.5 rounded-lg border border-teal-100/70 flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider">Total SKUs Listed</span>
+            <span className="text-lg font-black text-teal-900 mt-1">{filteredItems.length} items</span>
+          </div>
+          <div className="bg-teal-50/40 p-3.5 rounded-lg border border-teal-100/70 flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider">Total Stock Units</span>
+            <span className="text-lg font-black text-teal-900 mt-1">
+              {filteredItems.reduce((sum, item) => sum + (Number(item.Quantity) || 0), 0).toLocaleString()} pcs
+            </span>
+          </div>
+          <div className="bg-teal-50/40 p-3.5 rounded-lg border border-teal-100/70 flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider">Total Stock Valuation</span>
+            <span className="text-lg font-black text-teal-900 mt-1">
+              Rs. {totalFilteredValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-lg border border-gray-200">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider">Item Name</th>
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider">Description</th>
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider text-right">Quantity</th>
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider text-right">Unit Price</th>
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider">Weight</th>
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider">Vendor Name</th>
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider">Vendor Contact</th>
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider text-right">Total Value</th>
+                <th className="p-3 text-2xs font-semibold text-gray-500 uppercase tracking-wider">Last Updated</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="p-8 text-center text-gray-400 text-xs">
+                    No items found.
+                  </td>
+                </tr>
+              ) : (
+                filteredItems.map((item) => {
+                  const qty = Number(item.Quantity) || 0;
+                  const isOutOfStock = qty === 0;
+                  const isLowStock = qty > 0 && qty <= 10;
+                  return (
+                    <tr 
+                      key={`png-row-${item.ID}`} 
+                      className={isOutOfStock ? "bg-rose-50/20" : isLowStock ? "bg-amber-50/10" : ""}
+                    >
+                      <td className="p-3 text-2xs font-mono text-gray-500 font-semibold">{item.ID}</td>
+                      <td className="p-3 text-xs font-semibold text-gray-900">{item["Item Name"]}</td>
+                      <td className="p-3 text-2xs text-gray-600 max-w-[150px] truncate">{item.Description || "—"}</td>
+                      <td className="p-3 text-2xs"><span className="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-800 rounded font-medium">{item.Category}</span></td>
+                      <td className="p-3 text-2xs text-right font-semibold font-mono">
+                        {qty.toLocaleString()} {item.Unit || "pcs"}
+                        {isOutOfStock && <span className="block text-[8px] font-bold text-rose-600 uppercase mt-0.5">OUT</span>}
+                        {isLowStock && <span className="block text-[8px] font-bold text-amber-600 uppercase mt-0.5">LOW</span>}
+                      </td>
+                      <td className="p-3 text-2xs text-right font-mono text-gray-700">Rs. {(Number(item["Unit Price"]) || 0).toFixed(2)}</td>
+                      <td className="p-3 text-2xs text-gray-600">{item["Weight Value"] && Number(item["Weight Value"]) > 0 ? `${item["Weight Value"]}${item["Weight Unit"] || "g"}` : "—"}</td>
+                      <td className="p-3 text-2xs text-gray-700">{item["Vendor Name"] || "—"}</td>
+                      <td className="p-3 text-2xs text-gray-500">{item["Vendor Contact"] || "—"}</td>
+                      <td className="p-3 text-2xs text-right font-mono font-semibold text-gray-900">Rs. {(Number(item["Total Value"]) || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                      <td className="p-3 text-2xs text-gray-500">{item["Last Updated"] || "N/A"}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="text-center text-[9px] text-gray-400 uppercase tracking-widest pt-4 border-t border-gray-100">
+          REPORT GENERATED SECURELY VIA SWOT.WORKS PORTAL. CONFIDENTIAL. ALL RIGHTS RESERVED.
+        </div>
+      </div>
     </div>
   );
 }
