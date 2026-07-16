@@ -37,7 +37,7 @@
     background-color: #ffffff !important;
     background: #ffffff !important;
     color: #0f172a !important;
-    padding: 1.6cm 1.8cm !important;
+    padding: 1.2cm 1.4cm !important; /* Slightly more compact to comfortably fit on a single page */
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -50,6 +50,24 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
+  }
+
+  /* Reset layout wrappers to block and clear min-height / padding / margins */
+  #root,
+  #main-app-shell,
+  #main-content-stage,
+  #tab-stage-view {
+    background: transparent !important;
+    background-color: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
   }
 
   /* Hide standard web layouts & non-report items completely */
