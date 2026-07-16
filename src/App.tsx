@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { InventoryItem, LogItem, ConnectionMode, ConnectionConfig } from "./types";
 import Dashboard from "./components/Dashboard";
 import ItemList from "./components/ItemList";
@@ -50,6 +50,10 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isTesting, setIsTesting] = useState<boolean>(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+
+  // Debouncing refs for fast, accurate stock updates
+  const pendingUpdates = useRef<Record<string | number, { targetQty: number; originalItem: InventoryItem; accumulatedDelta: number }>>({});
+  const debounceTimeouts = useRef<Record<string | number, any>>({});
 
   // Form Modals State
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
@@ -121,9 +125,35 @@ export default function App() {
       const data = await itemsResponse.json();
       
       if (Array.isArray(data)) {
-        setItems(data);
+        // Merge with any active/pending optimistic updates so they don't get overwritten by background loads
+        const mergedData = data.map((loadedItem: InventoryItem) => {
+          const pending = pendingUpdates.current[loadedItem.ID];
+          if (pending) {
+            const finalTargetQty = pending.targetQty;
+            const unitPrice = Number(loadedItem["Unit Price"]) || 0;
+            let totalVal = finalTargetQty * unitPrice;
+            
+            if (loadedItem["Weight Value"] && Number(loadedItem["Weight Value"]) > 0) {
+              const wVal = Number(loadedItem["Weight Value"]) || 0;
+              if (loadedItem["Weight Unit"] === "g") {
+                totalVal = finalTargetQty * (wVal / 1000) * unitPrice;
+              } else {
+                totalVal = finalTargetQty * wVal * unitPrice;
+              }
+            }
+            return {
+              ...loadedItem,
+              Quantity: finalTargetQty,
+              "Total Value": Number(totalVal.toFixed(2)),
+              "Last Updated": new Date().toLocaleString("en-US", { hour12: false })
+            };
+          }
+          return loadedItem;
+        });
+
+        setItems(mergedData);
         // Sync live data copy to localstorage as an offline backup
-        localStorage.setItem("sheet_inventory_backup", JSON.stringify(data));
+        localStorage.setItem("sheet_inventory_backup", JSON.stringify(mergedData));
       } else if (data && data.status === "error") {
         throw new Error(data.message || "Failed to parse spreadsheet response");
       } else {
@@ -467,87 +497,134 @@ export default function App() {
     });
   };
 
-  // CRUD: Handle Quick Stock Adjustment (+/- buttons)
+  // CRUD: Handle Quick Stock Adjustment (+/- buttons) with debounced queueing
   const handleAdjustQuantity = async (item: InventoryItem, delta: number) => {
+    const itemId = item.ID;
     const currentQty = Number(item.Quantity) || 0;
-    const newQty = Math.max(0, currentQty + delta);
-    if (newQty === currentQty) return; // No change
+    const nextQty = Math.max(0, currentQty + delta);
+    if (nextQty === currentQty) return; // No change
 
-    // 1. Optimistic items update
-    const updatedItems = items.map(it => {
-      if (it.ID === item.ID) {
-        const unitPrice = Number(it["Unit Price"]) || 0;
-        let totalVal = newQty * unitPrice;
-        
-        if (it["Weight Value"] && Number(it["Weight Value"]) > 0) {
-          const wVal = Number(it["Weight Value"]) || 0;
-          if (it["Weight Unit"] === "g") {
-            totalVal = newQty * (wVal / 1000) * unitPrice;
-          } else {
-            totalVal = newQty * wVal * unitPrice;
-          }
-        }
-        
-        return {
-          ...it,
-          Quantity: newQty,
-          "Total Value": Number(totalVal.toFixed(2)),
-          "Last Updated": new Date().toLocaleString("en-US", { hour12: false })
-        };
-      }
-      return it;
-    });
-    setItems(updatedItems);
-    localStorage.setItem("sheet_inventory_backup", JSON.stringify(updatedItems));
-
-    // 2. Optimistic logs update
-    const newLogEntry: LogItem = {
-      Timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      "Item ID": item.ID,
-      "Item Name": item["Item Name"],
-      Action: delta > 0 ? "Quantity Increased" : "Quantity Decreased",
-      "Quantity Changed": delta,
-      "Updated By": "mshoibmehar@gmail.com"
-    };
-    const updatedLogs = [newLogEntry, ...logs];
-    setLogs(updatedLogs);
-    localStorage.setItem("sheet_inventory_logs_backup", JSON.stringify(updatedLogs));
-
-    setIsSyncing(true);
-
-    if (!config.webAppUrl) {
-      setGlobalError("Google Sheets URL is not configured; adjustments saved offline.");
-      setIsSyncing(false);
-      return;
+    // 1. Update the pending updates ref so that any concurrent loadInventoryData will respect our local state
+    if (!pendingUpdates.current[itemId]) {
+      pendingUpdates.current[itemId] = {
+        targetQty: nextQty,
+        originalItem: item,
+        accumulatedDelta: delta
+      };
+    } else {
+      const pending = pendingUpdates.current[itemId];
+      pending.targetQty = Math.max(0, pending.targetQty + delta);
+      pending.accumulatedDelta += delta;
     }
 
-    // Trigger non-blocking background update
-    fetch(config.webAppUrl, {
-      method: "POST",
-      mode: "cors",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        action: "update",
-        id: item.ID,
-        item: {
-          Quantity: newQty,
-        },
-        updatedBy: "mshoibmehar@gmail.com"
-      }),
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error("Failed to adjust quantity on Google Sheet.");
-      }
-      // Silently sync state in background
-      loadInventoryData(false, true).catch(e => console.warn("Silent background load warning:", e));
-    })
-    .catch(err => {
-      console.error("Error adjusting quantity:", err);
-      setGlobalError("Failed to sync quantity adjustment in background.");
-      setIsSyncing(false);
+    const finalTargetQty = pendingUpdates.current[itemId].targetQty;
+
+    // 2. Optimistic UI update for items
+    setItems(currentItems => {
+      const newItems = currentItems.map(it => {
+        if (it.ID === itemId) {
+          const unitPrice = Number(it["Unit Price"]) || 0;
+          let totalVal = finalTargetQty * unitPrice;
+          
+          if (it["Weight Value"] && Number(it["Weight Value"]) > 0) {
+            const wVal = Number(it["Weight Value"]) || 0;
+            if (it["Weight Unit"] === "g") {
+              totalVal = finalTargetQty * (wVal / 1000) * unitPrice;
+            } else {
+              totalVal = finalTargetQty * wVal * unitPrice;
+            }
+          }
+          
+          return {
+            ...it,
+            Quantity: finalTargetQty,
+            "Total Value": Number(totalVal.toFixed(2)),
+            "Last Updated": new Date().toLocaleString("en-US", { hour12: false })
+          };
+        }
+        return it;
+      });
+      localStorage.setItem("sheet_inventory_backup", JSON.stringify(newItems));
+      return newItems;
     });
+
+    // 3. Clear existing debounce timer for this item
+    if (debounceTimeouts.current[itemId]) {
+      clearTimeout(debounceTimeouts.current[itemId]);
+    }
+
+    // 4. Set a new debounce timer to send the consolidated updates to Google Sheet after 800ms of inactivity
+    debounceTimeouts.current[itemId] = setTimeout(() => {
+      const pending = pendingUpdates.current[itemId];
+      if (!pending) return;
+
+      const finalQtyToSend = pending.targetQty;
+      const totalDelta = pending.accumulatedDelta;
+
+      setIsSyncing(true);
+
+      // Add a single consolidated log entry for the accumulated change
+      const newLogEntry: LogItem = {
+        Timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        "Item ID": itemId,
+        "Item Name": item["Item Name"],
+        Action: totalDelta > 0 ? "Quantity Increased" : "Quantity Decreased",
+        "Quantity Changed": totalDelta,
+        "Updated By": "mshoibmehar@gmail.com"
+      };
+      setLogs(currentLogs => {
+        const updatedLogs = [newLogEntry, ...currentLogs];
+        localStorage.setItem("sheet_inventory_logs_backup", JSON.stringify(updatedLogs));
+        return updatedLogs;
+      });
+
+      if (!config.webAppUrl) {
+        setGlobalError("Google Sheets URL is not configured; adjustments saved offline.");
+        setIsSyncing(false);
+        delete pendingUpdates.current[itemId];
+        return;
+      }
+
+      fetch(config.webAppUrl, {
+        method: "POST",
+        mode: "cors",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "update",
+          id: itemId,
+          item: {
+            Quantity: finalQtyToSend,
+          },
+          updatedBy: "mshoibmehar@gmail.com"
+        }),
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("Failed to adjust quantity on Google Sheet.");
+        }
+        // Success: Now we can remove it from the pending updates map
+        delete pendingUpdates.current[itemId];
+        
+        // Silently sync state in background after a slight delay to allow spreadsheet to calculate formulas
+        setTimeout(() => {
+          // If no new adjustments were started for this item while this fetch was in progress,
+          // then trigger background sync.
+          if (!pendingUpdates.current[itemId]) {
+            loadInventoryData(false, true).catch(e => console.warn("Silent background load warning:", e));
+          } else {
+            setIsSyncing(false);
+          }
+        }, 1200);
+      })
+      .catch(err => {
+        console.error("Error adjusting quantity:", err);
+        setGlobalError("Failed to sync quantity adjustment in background.");
+        setIsSyncing(false);
+        delete pendingUpdates.current[itemId];
+      });
+
+    }, 800); // 800ms debounce
   };
 
   // Form open triggers
