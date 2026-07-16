@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { InventoryItem, CATEGORIES } from "../types";
+import Logo from "./Logo";
 import { 
   Search, 
   Filter, 
@@ -114,33 +115,41 @@ export default function ItemList({
   return (
     <div className="space-y-4" id="item-list-container">
       {/* Print-Only Professional Header */}
-      <div className="hidden print:block border-b-2 border-gray-800 pb-4 mb-6" id="print-report-header">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight uppercase">Inventory Stock Report</h1>
-            <p className="text-xs text-gray-500 mt-1">Spreadsheet Inventory Management System</p>
+      <div className="hidden print:block border-b border-teal-600/30 pb-5 mb-6" id="print-report-header">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Logo className="w-12 h-12" />
+            <div>
+              <h1 className="text-xl font-black text-gray-950 tracking-tight leading-none">
+                Swot<span className="text-[#1BC2A4]">.works</span>
+              </h1>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-teal-700/80 mt-1">Inventory Management Portal</p>
+            </div>
           </div>
-          <div className="text-right text-xs text-gray-600 space-y-1">
-            <div><strong>Date Generated:</strong> {new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-            <div><strong>Database Mode:</strong> {connectionMode === "live" ? "Google Sheets Live" : "Local Demo Storage"}</div>
-            <div><strong>Filtered By:</strong> {categoryFilter || "All Categories"}{showOnlyLowStock ? " (Low Stock Only)" : ""}</div>
+          <div className="text-right">
+            <h2 className="text-lg font-extrabold text-gray-900 tracking-tight uppercase">Inventory Stock Report</h2>
+            <div className="text-[9px] text-gray-500 font-medium mt-1.5 space-y-0.5">
+              <div>Date Generated: <span className="font-semibold text-gray-800">{new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+              <div>Database Connection: <span className="font-semibold text-gray-800">{connectionMode === "live" ? "Google Sheets Live" : "Local Demo Storage"}</span></div>
+              <div>Filtered Category: <span className="font-semibold text-gray-800">{categoryFilter || "All Categories"}{showOnlyLowStock ? " (Low Stock Only)" : ""}</span></div>
+            </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-gray-100">
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Total SKUs Listed</span>
-            <span className="text-base font-bold text-gray-900 font-sans mt-0.5 block">{filteredItems.length} items</span>
+        <div className="grid grid-cols-3 gap-4 mt-6">
+          <div className="bg-teal-50/40 p-3.5 rounded-lg border border-teal-100/70 flex flex-col justify-between" id="print-card-skus">
+            <span className="text-[9px] font-bold text-teal-800 uppercase tracking-wider">Total SKUs Listed</span>
+            <span className="text-lg font-black text-teal-900 mt-1">{filteredItems.length} items</span>
           </div>
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Total Stock Units</span>
-            <span className="text-base font-bold text-gray-900 font-sans mt-0.5 block">
+          <div className="bg-teal-50/40 p-3.5 rounded-lg border border-teal-100/70 flex flex-col justify-between" id="print-card-units">
+            <span className="text-[9px] font-bold text-teal-800 uppercase tracking-wider">Total Stock Units</span>
+            <span className="text-lg font-black text-teal-900 mt-1">
               {filteredItems.reduce((sum, item) => sum + (Number(item.Quantity) || 0), 0).toLocaleString()} pcs
             </span>
           </div>
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200/60 font-semibold">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Total Valuation</span>
-            <span className="text-base font-bold text-indigo-900 font-sans mt-0.5 block">
+          <div className="bg-teal-50/40 p-3.5 rounded-lg border border-teal-100/70 flex flex-col justify-between" id="print-card-valuation">
+            <span className="text-[9px] font-bold text-teal-800 uppercase tracking-wider">Total Stock Valuation</span>
+            <span className="text-lg font-black text-teal-900 mt-1">
               Rs. {totalFilteredValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
