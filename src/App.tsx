@@ -670,7 +670,7 @@ export default function App() {
             </div>
 
             {/* Main Tabs Navigation */}
-            <nav className="flex space-x-1 sm:space-x-2 bg-gray-100 p-1 rounded-lg border border-gray-200/50" id="tabs-navigation">
+            <nav className="hidden md:flex space-x-1 sm:space-x-2 bg-gray-100 p-1 rounded-lg border border-gray-200/50" id="tabs-navigation">
               <button
                 onClick={() => setActiveTab("dashboard")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
@@ -755,7 +755,7 @@ export default function App() {
       )}
 
       {/* Main Body Stage */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6" id="main-content-stage">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-6" id="main-content-stage">
         {isLoading ? (
           <div className="h-96 flex flex-col items-center justify-center space-y-4" id="global-loading">
             <svg className="animate-spin h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24">
@@ -813,7 +813,7 @@ export default function App() {
       </main>
 
       {/* Footer Branding */}
-      <footer className="bg-white border-t border-gray-100 py-6 text-center text-xs text-gray-400 shrink-0" id="app-footer">
+      <footer className="bg-white border-t border-gray-100 py-6 pb-24 md:pb-6 text-center text-xs text-gray-400 shrink-0" id="app-footer">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Logo className="w-5 h-5" />
@@ -834,6 +834,69 @@ export default function App() {
           onSave={handleSaveItem}
         />
       )}
+
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around items-center z-40 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] pb-safe" id="mobile-tabs-navigation">
+        <button
+          onClick={() => setActiveTab("dashboard")}
+          className={`flex flex-col items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+            activeTab === "dashboard"
+              ? "text-indigo-600"
+              : "text-gray-400 hover:text-gray-600"
+          }`}
+          id="mobile-tab-dashboard-trigger"
+        >
+          <LayoutDashboard className="w-5 h-5" />
+          <span className="text-[10px]">Overview</span>
+        </button>
+        
+        <button
+          onClick={() => setActiveTab("inventory")}
+          className={`flex flex-col items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+            activeTab === "inventory"
+              ? "text-indigo-600"
+              : "text-gray-400 hover:text-gray-600"
+          }`}
+          id="mobile-tab-inventory-trigger"
+        >
+          <Layers className="w-5 h-5" />
+          <span className="text-[10px]">Inventory</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("logs")}
+          className={`flex flex-col items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+            activeTab === "logs"
+              ? "text-indigo-600"
+              : "text-gray-400 hover:text-gray-600"
+          }`}
+          id="mobile-tab-logs-trigger"
+        >
+          <History className="w-5 h-5" />
+          <span className="text-[10px]">Logs</span>
+        </button>
+        
+        <button
+          onClick={() => setActiveTab("setup")}
+          className={`flex flex-col items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer relative ${
+            activeTab === "setup"
+              ? "text-indigo-600"
+              : "text-gray-400 hover:text-gray-600"
+          }`}
+          id="mobile-tab-setup-trigger"
+        >
+          <div className="relative">
+            <Settings className="w-5 h-5" />
+            {connectionMode === "live" && config.testStatus === "success" && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white animate-pulse"></span>
+            )}
+            {connectionMode === "live" && config.testStatus === "error" && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white animate-pulse"></span>
+            )}
+          </div>
+          <span className="text-[10px]">Setup</span>
+        </button>
+      </nav>
     </div>
   );
 }

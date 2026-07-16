@@ -244,18 +244,6 @@ export default function ItemList({
         </div>
       </div>
 
-      {/* Iframe print warning hint */}
-      {isIframe && (
-        <div className="bg-amber-50/50 border border-amber-200/40 rounded-xl p-3 text-xs text-amber-800 flex items-start gap-2.5 print:hidden" id="iframe-print-tip">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <p className="font-bold text-amber-900">Printing Hint</p>
-            <p className="text-amber-700/95 leading-relaxed">
-              Because this application is running inside a secure preview pane, some browsers block printing tasks. If nothing happens when you click "Print Report", click the <strong className="text-amber-900 font-semibold">"Open in New Tab"</strong> button in the top-right corner, then print flawlessly!
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Connection Info Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-xs text-gray-500 print:hidden">
@@ -291,7 +279,8 @@ export default function ItemList({
 
       {/* Main Table Card */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden" id="inventory-table-card">
-        <div className="overflow-x-auto">
+        {/* Desktop View Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse" id="inventory-table">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
@@ -579,6 +568,166 @@ export default function ItemList({
               </tfoot>
             )}
           </table>
+        </div>
+
+        {/* Mobile View Cards */}
+        <div className="block md:hidden divide-y divide-gray-100 bg-white" id="inventory-mobile-list">
+          {filteredItems.length === 0 ? (
+            <div className="p-12 text-center text-gray-400">
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <ShoppingBag className="w-8 h-8 text-gray-300" />
+                <span className="text-sm font-medium text-gray-700">No inventory items found</span>
+                <span className="text-xs text-gray-400">Try adjusting your filters, searching for something else, or creating a new item!</span>
+              </div>
+            </div>
+          ) : (
+            filteredItems.map((item) => {
+              const qty = Number(item.Quantity) || 0;
+              const isOutOfStock = qty === 0;
+              const isLowStock = qty > 0 && qty <= 10;
+
+              return (
+                <div 
+                  key={item.ID} 
+                  className={`p-4 space-y-3 transition-colors ${
+                    isOutOfStock ? "bg-rose-50/20" : isLowStock ? "bg-amber-50/10" : "bg-white"
+                  }`}
+                  id={`inventory-card-${item.ID}`}
+                >
+                  {/* Top Line: Name and Category/ID badges */}
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-semibold text-gray-900 break-words">{item["Item Name"]}</h4>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span className="text-[10px] font-mono font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                          ID: {item.ID}
+                        </span>
+                        <span className="text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 px-1.5 py-0.5 rounded-full">
+                          {item.Category}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => onEdit(item)}
+                        className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                        title="Edit Item"
+                        id={`btn-mobile-edit-${item.ID}`}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setItemToDelete(item)}
+                        className="p-2 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title="Delete Item"
+                        id={`btn-mobile-delete-${item.ID}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Description / Notes if any */}
+                  {item.Description ? (
+                    <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed bg-gray-50/50 p-2 rounded-lg border border-gray-100">
+                      {item.Description}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No notes</p>
+                  )}
+
+                  {/* Pricing and Attributes Grid */}
+                  <div className="grid grid-cols-2 gap-3 py-1 text-xs">
+                    <div>
+                      <span className="text-gray-400 block font-medium">Unit Price</span>
+                      <span className="font-semibold text-gray-800 font-mono">Rs. {(Number(item["Unit Price"]) || 0).toFixed(2)}</span>
+                      <span className="text-[10px] text-gray-400 block lowercase">
+                        per {item["Weight Value"] && Number(item["Weight Value"]) > 0 ? "kg" : (item.Unit || "unit")}
+                      </span>
+                    </div>
+                    {item["Weight Value"] && Number(item["Weight Value"]) > 0 ? (
+                      <div>
+                        <span className="text-gray-400 block font-medium">Weight/Size</span>
+                        <span className="font-semibold text-gray-800">⚖️ {item["Weight Value"]}{item["Weight Unit"] || "g"}</span>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="text-gray-400 block font-medium">Weight/Size</span>
+                        <span className="text-gray-400 font-medium">—</span>
+                      </div>
+                    )}
+                    {item["Vendor Name"] && (
+                      <div className="col-span-2 border-t border-gray-50 pt-1.5">
+                        <span className="text-gray-400 block font-medium">Vendor</span>
+                        <span className="font-medium text-gray-700">{item["Vendor Name"]}</span>
+                        {item["Vendor Contact"] && (
+                          <span className="text-gray-500 text-[11px] block">{item["Vendor Contact"]}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Stepper controls and Valuation footer line */}
+                  <div className="flex items-center justify-between pt-2.5 border-t border-gray-100">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => onAdjustQuantity(item, -1)}
+                        disabled={qty <= 0}
+                        className="w-9 h-9 flex items-center justify-center border border-gray-200 text-gray-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30 rounded-lg transition-all cursor-pointer shadow-2xs"
+                        id={`btn-mobile-qty-dec-${item.ID}`}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <div className="text-center min-w-[3.5rem]">
+                        <span className="text-sm font-bold font-mono text-gray-900">{qty}</span>
+                        <span className="text-[10px] text-gray-400 block lowercase font-medium">{item.Unit || "pcs"}</span>
+                      </div>
+                      <button
+                        onClick={() => onAdjustQuantity(item, 1)}
+                        className="w-9 h-9 flex items-center justify-center border border-gray-200 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer shadow-2xs"
+                        id={`btn-mobile-qty-inc-${item.ID}`}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-gray-400 block font-medium uppercase tracking-wider">Total Value</span>
+                      <span className="text-sm font-bold font-mono text-indigo-950">
+                        Rs. {(Number(item["Total Value"]) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stock State Badge */}
+                  {(isOutOfStock || isLowStock) && (
+                    <div className="pt-1 flex">
+                      {isOutOfStock && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-100">
+                          Out of Stock
+                        </span>
+                      )}
+                      {isLowStock && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-100">
+                          Low Stock Warning
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+
+          {/* Mobile view Filtered Inventory Valuation block */}
+          {filteredItems.length > 0 && (
+            <div className="bg-gray-50/80 p-4 border-t border-gray-100 flex justify-between items-center text-xs font-semibold text-gray-900">
+              <span className="uppercase tracking-wider text-gray-500 font-bold">Filtered Valuation:</span>
+              <span className="font-mono text-sm text-indigo-900 font-bold">
+                Rs. {totalFilteredValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

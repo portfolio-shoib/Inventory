@@ -204,7 +204,8 @@ export default function LogsView({
 
       {/* Audit Logs Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden" id="logs-table-card">
-        <div className="overflow-x-auto">
+        {/* Desktop View Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse" id="logs-table">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
@@ -326,6 +327,78 @@ export default function LogsView({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View Timeline */}
+        <div className="block md:hidden divide-y divide-gray-100 bg-white" id="logs-mobile-list">
+          {filteredLogs.length === 0 ? (
+            <div className="p-12 text-center text-gray-400">
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <History className="w-8 h-8 text-gray-300" />
+                <span className="text-sm font-medium text-gray-700">No logs recorded yet</span>
+                <span className="text-xs text-gray-400">
+                  {searchQuery || actionFilter 
+                    ? "Adjust your filters to see more results." 
+                    : "Once you change stock or update items, live logs will populate here."}
+                </span>
+              </div>
+            </div>
+          ) : (
+            filteredLogs.map((log, index) => {
+              const qtyChange = Number(log["Quantity Changed"]) || 0;
+              const isPositive = qtyChange > 0;
+              const isNegative = qtyChange < 0;
+
+              // Border indicator color
+              let borderCol = "border-l-gray-300";
+              if (log.Action === "New Item Added" || log.Action === "Stock In") {
+                borderCol = "border-l-emerald-500";
+              } else if (log.Action === "Stock Out" || log.Action === "Quantity Decreased" || log.Action === "Quantity Increased") {
+                borderCol = isPositive ? "border-l-emerald-500" : "border-l-amber-500";
+              } else if (log.Action === "Item Deleted") {
+                borderCol = "border-l-rose-500";
+              }
+
+              return (
+                <div 
+                  key={index} 
+                  className={`p-4 border-l-4 ${borderCol} space-y-2 transition-colors hover:bg-gray-50/50`}
+                  id={`log-card-${index}`}
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {getActionBadge(log.Action)}
+                      <span className="text-[10px] font-mono text-gray-500 font-bold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
+                        ID: {log["Item ID"] || "N/A"}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-gray-400 font-mono flex items-center gap-1 shrink-0">
+                      <Calendar className="w-3 h-3" />
+                      {log.Timestamp}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center gap-4">
+                    <h4 className="text-sm font-semibold text-gray-900 line-clamp-1">{log["Item Name"] || "Unknown Item"}</h4>
+                    <div className="text-right shrink-0 font-mono text-sm font-bold">
+                      {qtyChange === 0 ? (
+                        <span className="text-gray-400 font-medium">—</span>
+                      ) : isPositive ? (
+                        <span className="text-emerald-600">+{qtyChange}</span>
+                      ) : (
+                        <span className="text-rose-600">{qtyChange}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-[11px] text-gray-500">
+                    <User className="w-3 h-3 text-gray-400" />
+                    <span>Operator: {log["Updated By"] || "System"}</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
