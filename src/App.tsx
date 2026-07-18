@@ -52,9 +52,16 @@ export default function App() {
   const [isTesting, setIsTesting] = useState<boolean>(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
-  // Debouncing refs for fast, accurate stock updates
-  const pendingUpdates = useRef<Record<string | number, { targetQty: number; originalItem: InventoryItem; accumulatedDelta: number }>>({});
+  // Debouncing and optimistic state refs for fast, accurate stock updates
+  const itemsRef = useRef<InventoryItem[]>([]);
+  const localQuantities = useRef<Record<string | number, number>>({});
+  const accumulatedDeltas = useRef<Record<string | number, number>>({});
+  const inFlightRequests = useRef<Record<string | number, number>>({});
+  const activeAdjustments = useRef<Record<string | number, boolean>>({});
   const debounceTimeouts = useRef<Record<string | number, any>>({});
+
+  // Synchronize itemsRef with items state on every render
+  itemsRef.current = items;
 
   // Form Modals State
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
@@ -128,9 +135,11 @@ export default function App() {
       if (Array.isArray(data)) {
         // Merge with any active/pending optimistic updates so they don't get overwritten by background loads
         const mergedData = data.map((loadedItem: InventoryItem) => {
-          const pending = pendingUpdates.current[loadedItem.ID];
-          if (pending) {
-            const finalTargetQty = pending.targetQty;
+          const hasActiveAdjustment = activeAdjustments.current && activeAdjustments.current[loadedItem.ID];
+          const localQty = localQuantities.current ? localQuantities.current[loadedItem.ID] : undefined;
+          
+          if (hasActiveAdjustment && localQty !== undefined) {
+            const finalTargetQty = localQty;
             const unitPrice = Number(loadedItem["Unit Price"]) || 0;
             let totalVal = finalTargetQty * unitPrice;
             
@@ -501,44 +510,47 @@ export default function App() {
   // CRUD: Handle Quick Stock Adjustment (+/- buttons) with debounced queueing
   const handleAdjustQuantity = async (item: InventoryItem, delta: number) => {
     const itemId = item.ID;
-    const currentQty = Number(item.Quantity) || 0;
-    const nextQty = Math.max(0, currentQty + delta);
-    if (nextQty === currentQty) return; // No change
 
-    // 1. Update the pending updates ref so that any concurrent loadInventoryData will respect our local state
-    if (!pendingUpdates.current[itemId]) {
-      pendingUpdates.current[itemId] = {
-        targetQty: nextQty,
-        originalItem: item,
-        accumulatedDelta: delta
-      };
-    } else {
-      const pending = pendingUpdates.current[itemId];
-      pending.targetQty = Math.max(0, pending.targetQty + delta);
-      pending.accumulatedDelta += delta;
+    // Ensure we track active adjustments so loadInventoryData doesn't overwrite it
+    activeAdjustments.current[itemId] = true;
+
+    // Get the base quantity to adjust from:
+    // Prefer the latest value from localQuantities, otherwise from items state
+    let baseQty = localQuantities.current[itemId];
+    if (baseQty === undefined) {
+      // Find the item in the current state to get its quantity
+      const currentItemInState = itemsRef.current.find(it => it.ID === itemId);
+      baseQty = currentItemInState ? (Number(currentItemInState.Quantity) || 0) : (Number(item.Quantity) || 0);
     }
 
-    const finalTargetQty = pendingUpdates.current[itemId].targetQty;
+    const nextQty = Math.max(0, baseQty + delta);
+    localQuantities.current[itemId] = nextQty;
+
+    // Track accumulated delta for the log entry of this interaction session
+    if (accumulatedDeltas.current[itemId] === undefined) {
+      accumulatedDeltas.current[itemId] = 0;
+    }
+    accumulatedDeltas.current[itemId] += delta;
 
     // 2. Optimistic UI update for items
     setItems(currentItems => {
       const newItems = currentItems.map(it => {
         if (it.ID === itemId) {
           const unitPrice = Number(it["Unit Price"]) || 0;
-          let totalVal = finalTargetQty * unitPrice;
+          let totalVal = nextQty * unitPrice;
           
           if (it["Weight Value"] && Number(it["Weight Value"]) > 0) {
             const wVal = Number(it["Weight Value"]) || 0;
             if (it["Weight Unit"] === "g") {
-              totalVal = finalTargetQty * (wVal / 1000) * unitPrice;
+              totalVal = nextQty * (wVal / 1000) * unitPrice;
             } else {
-              totalVal = finalTargetQty * wVal * unitPrice;
+              totalVal = nextQty * wVal * unitPrice;
             }
           }
           
           return {
             ...it,
-            Quantity: finalTargetQty,
+            Quantity: nextQty,
             "Total Value": Number(totalVal.toFixed(2)),
             "Last Updated": new Date().toLocaleString("en-US", { hour12: false })
           };
@@ -556,11 +568,22 @@ export default function App() {
 
     // 4. Set a new debounce timer to send the consolidated updates to Google Sheet after 800ms of inactivity
     debounceTimeouts.current[itemId] = setTimeout(() => {
-      const pending = pendingUpdates.current[itemId];
-      if (!pending) return;
+      const finalQtyToSend = localQuantities.current[itemId];
+      const totalDelta = accumulatedDeltas.current[itemId] || 0;
 
-      const finalQtyToSend = pending.targetQty;
-      const totalDelta = pending.accumulatedDelta;
+      // Clean up the accumulated delta so a new batch starts fresh if they click again
+      delete accumulatedDeltas.current[itemId];
+      // Clean up the timeout ref
+      delete debounceTimeouts.current[itemId];
+
+      if (totalDelta === 0) {
+        // If net delta is 0, no sync is needed
+        if (!inFlightRequests.current[itemId]) {
+          delete activeAdjustments.current[itemId];
+          delete localQuantities.current[itemId];
+        }
+        return;
+      }
 
       setIsSyncing(true);
 
@@ -582,9 +605,16 @@ export default function App() {
       if (!config.webAppUrl) {
         setGlobalError("Google Sheets URL is not configured; adjustments saved offline.");
         setIsSyncing(false);
-        delete pendingUpdates.current[itemId];
+        delete activeAdjustments.current[itemId];
+        delete localQuantities.current[itemId];
         return;
       }
+
+      // Increment in-flight requests count
+      if (!inFlightRequests.current[itemId]) {
+        inFlightRequests.current[itemId] = 0;
+      }
+      inFlightRequests.current[itemId]++;
 
       fetch(config.webAppUrl, {
         method: "POST",
@@ -604,14 +634,29 @@ export default function App() {
         if (!response.ok) {
           throw new Error("Failed to adjust quantity on Google Sheet.");
         }
-        // Success: Now we can remove it from the pending updates map
-        delete pendingUpdates.current[itemId];
-        
+        return response.json();
+      })
+      .then(res => {
+        // Decrement in-flight requests count
+        if (inFlightRequests.current[itemId]) {
+          inFlightRequests.current[itemId]--;
+        }
+
+        const hasNewPendingClicks = debounceTimeouts.current[itemId] !== undefined;
+        const hasInFlight = (inFlightRequests.current[itemId] || 0) > 0;
+
+        if (!hasNewPendingClicks && !hasInFlight) {
+          delete activeAdjustments.current[itemId];
+          delete localQuantities.current[itemId];
+
+          if (res && res.status === "success" && res.item) {
+            setItems(current => current.map(it => it.ID === itemId ? res.item : it));
+          }
+        }
+
         // Silently sync state in background after a slight delay to allow spreadsheet to calculate formulas
         setTimeout(() => {
-          // If no new adjustments were started for this item while this fetch was in progress,
-          // then trigger background sync.
-          if (!pendingUpdates.current[itemId]) {
+          if (!activeAdjustments.current[itemId]) {
             loadInventoryData(false, true).catch(e => console.warn("Silent background load warning:", e));
           } else {
             setIsSyncing(false);
@@ -620,9 +665,20 @@ export default function App() {
       })
       .catch(err => {
         console.error("Error adjusting quantity:", err);
+        if (inFlightRequests.current[itemId]) {
+          inFlightRequests.current[itemId]--;
+        }
+
+        const hasNewPendingClicks = debounceTimeouts.current[itemId] !== undefined;
+        const hasInFlight = (inFlightRequests.current[itemId] || 0) > 0;
+
+        if (!hasNewPendingClicks && !hasInFlight) {
+          delete activeAdjustments.current[itemId];
+          delete localQuantities.current[itemId];
+        }
+
         setGlobalError("Failed to sync quantity adjustment in background.");
         setIsSyncing(false);
-        delete pendingUpdates.current[itemId];
       });
 
     }, 800); // 800ms debounce
